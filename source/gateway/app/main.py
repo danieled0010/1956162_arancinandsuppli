@@ -148,8 +148,6 @@ class SensorEventTriggerRequest(BaseModel):
         "earthquake",
         "conventional_explosion",
         "nuclear_like",
-        "calibration_pulse",
-        "datacenter_shutdown_disturbance",
     ]
 
 

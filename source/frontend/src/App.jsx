@@ -30,16 +30,12 @@ const MANUAL_TRIGGER_EVENT_TYPES = [
   { value: 'earthquake', label: 'Earthquake' },
   { value: 'conventional_explosion', label: 'Conventional Explosion' },
   { value: 'nuclear_like', label: 'Nuclear-like' },
-  { value: 'calibration_pulse', label: 'Calibration Pulse' },
-  { value: 'datacenter_shutdown_disturbance', label: 'Datacenter Shutdown Disturbance' },
 ];
 
 const eventTypeClass = {
   earthquake: 'badge-earthquake',
   conventional_explosion: 'badge-explosion',
   nuclear_like: 'badge-nuclear',
-  calibration_pulse: 'badge-default',
-  datacenter_shutdown_disturbance: 'badge-default',
 };
 
 function App() {
