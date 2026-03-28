@@ -118,6 +118,16 @@ services:
       - processor-c
     ports:
       - "8088:8088"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'python -c "import urllib.request; urllib.request.urlopen(\"http://127.0.0.1:8088/health\", timeout=5).read()"',
+        ]
+      interval: 3s
+      timeout: 6s
+      retries: 20
+      start_period: 90s
 
   frontend:
     build:
@@ -125,7 +135,8 @@ services:
       dockerfile: frontend/Dockerfile
     container_name: seismic-frontend
     depends_on:
-      - gateway
+      gateway:
+        condition: service_healthy
     ports:
       - "5173:80"
 
