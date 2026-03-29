@@ -6,3 +6,4 @@ source/frontend/node_modules/
 source/frontend/dist/
 source/frontend/package-lock.json
 .DS_Store
+.gitignore
