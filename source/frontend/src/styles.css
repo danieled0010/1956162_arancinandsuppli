@@ -330,7 +330,8 @@ input {
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
   grid-template-areas:
     'live replicas'
-    'bands replicas'
+    'filters filters'
+    'bands bands'
     'history history';
   gap: 14px;
   align-items: start;
@@ -339,11 +340,20 @@ input {
 .live-panel {
   grid-area: live;
   padding: 14px;
+  display: flex;
+  flex-direction: column;
+  height: 460px;
+  min-height: 460px;
+  max-height: 460px;
+  overflow: hidden;
 }
 
 .replicas-panel {
   grid-area: replicas;
   padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-self: start;
 }
 
 .bands-panel {
@@ -351,9 +361,23 @@ input {
   padding: 14px;
 }
 
+.filters-panel {
+  grid-area: filters;
+  margin-bottom: 0;
+}
+
+.map-panel {
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
 .history-panel {
   grid-area: history;
   padding: 14px;
+  display: flex;
+  flex-direction: column;
+  max-height: 420px;
+  overflow: hidden;
 }
 
 .empty-state {
@@ -368,8 +392,10 @@ input {
   padding: 0;
   display: grid;
   gap: 8px;
-  max-height: 380px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  padding-right: 2px;
 }
 
 .live-item {
@@ -452,6 +478,10 @@ input {
   display: grid;
   grid-template-columns: 1fr;
   gap: 8px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 .replica-card {
@@ -555,16 +585,30 @@ input {
 
 .table-wrap {
   overflow-x: auto;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.82);
+  max-height: 300px;
+}
+
+.history-panel .table-wrap {
+  flex: 1;
+  min-height: 0;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
   min-width: min(100%, 820px);
+}
+
+.history-panel thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.96);
 }
 
 thead th {
@@ -618,6 +662,85 @@ tbody tr:hover {
   margin: 0;
   font-size: 0.8rem;
   color: var(--ink-soft);
+}
+
+.geo-map-wrap {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.82);
+  overflow: hidden;
+}
+
+.geo-map {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.leaflet-map {
+  width: 100%;
+  height: 430px;
+}
+
+.map-legend {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.map-legend-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+  margin-right: 4px;
+}
+
+.map-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.74rem;
+  color: var(--ink-soft);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.map-legend-item i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.geo-map-bg {
+  fill: #f7fafc;
+}
+
+.geo-grid-line {
+  stroke: rgba(16, 37, 63, 0.14);
+  stroke-width: 1.3;
+}
+
+.geo-point-label {
+  text-anchor: middle;
+  font-size: 16px;
+  fill: #0f2740;
+  font-weight: 700;
+}
+
+.geo-point-count {
+  text-anchor: middle;
+  font-size: 18px;
+  fill: #fff;
+  font-weight: 800;
+}
+
+.geo-map-note {
+  margin-top: 8px;
 }
 
 .clickable-row {
@@ -685,6 +808,7 @@ tbody tr:hover {
     grid-template-areas:
       'live'
       'replicas'
+      'filters'
       'bands'
       'history';
   }
@@ -715,6 +839,8 @@ tbody tr:hover {
 
   .history-panel .table-wrap {
     overflow-x: visible;
+    overflow-y: visible;
+    max-height: none;
     border: none;
     background: transparent;
   }

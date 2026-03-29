@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CircleMarker, MapContainer, Popup, TileLayer, Tooltip, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
 import {
   apiUrl,
   buildSinceIso,
@@ -37,6 +39,32 @@ const eventTypeClass = {
   conventional_explosion: 'badge-explosion',
   nuclear_like: 'badge-nuclear',
 };
+
+const eventTypeMapColor = {
+  earthquake: '#0f9d92',
+  conventional_explosion: '#f05a28',
+  nuclear_like: '#2463eb',
+};
+
+function MapBoundsUpdater({ points }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!points.length) {
+      return;
+    }
+
+    const bounds = points.map((point) => [point.latitude, point.longitude]);
+    if (bounds.length === 1) {
+      map.setView(bounds[0], 7, { animate: false });
+      return;
+    }
+
+    map.fitBounds(bounds, { padding: [30, 30] });
+  }, [map, points]);
+
+  return null;
+}
 
 function App() {
   const [events, setEvents] = useState([]);
@@ -287,6 +315,46 @@ function App() {
     return Array.from(fromEvents).sort();
   }, [events, liveEvents, sensors]);
 
+  const geoPoints = useMemo(() => {
+    const sensorsWithCoordinates = sensors
+      .map((sensor) => ({
+        id: sensor.id,
+        name: sensor.name || sensor.id,
+        latitude: Number(sensor.coordinates?.latitude),
+        longitude: Number(sensor.coordinates?.longitude),
+      }))
+      .filter((sensor) => Number.isFinite(sensor.latitude) && Number.isFinite(sensor.longitude));
+
+    if (!sensorsWithCoordinates.length) {
+      return [];
+    }
+
+    const perSensorStats = new Map();
+    events.forEach((event) => {
+      const current = perSensorStats.get(event.sensor_id) || {
+        count: 0,
+        latestType: null,
+        latestCreatedAt: null,
+      };
+
+      current.count += 1;
+      if (!current.latestCreatedAt || new Date(event.created_at) > new Date(current.latestCreatedAt)) {
+        current.latestCreatedAt = event.created_at;
+        current.latestType = event.event_type;
+      }
+      perSensorStats.set(event.sensor_id, current);
+    });
+
+    return sensorsWithCoordinates.map((sensor) => {
+      const stats = perSensorStats.get(sensor.id);
+      return {
+        ...sensor,
+        detections: stats?.count || 0,
+        latestType: stats?.latestType || null,
+      };
+    });
+  }, [events, sensors]);
+
   const countsByType = useMemo(() => {
     if (analytics?.countsByType) {
       return analytics.countsByType;
@@ -445,83 +513,6 @@ function App() {
         />
       </section>
 
-      <section className="panel control-panel">
-        <div className="panel-head">
-          <h2>Filters</h2>
-          <span className={`status-pill ${streamConnected ? 'online' : 'offline'}`}>
-            Stream: {streamPaused ? 'paused' : streamConnected ? 'online' : 'reconnecting'}
-          </span>
-        </div>
-
-        <div className="control-grid">
-          <label>
-            Sensor
-            <select value={sensorFilter} onChange={(event) => setSensorFilter(event.target.value)}>
-              <option value="">All sensors</option>
-              {sensorOptions.map((sensorId) => (
-                <option key={sensorId} value={sensorId}>
-                  {sensorNameMap[sensorId] || sensorId}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Event Type
-            <select value={eventTypeFilter} onChange={(event) => setEventTypeFilter(event.target.value)}>
-              <option value="">All types</option>
-              {EVENT_TYPE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Time Window
-            <select value={timeWindow} onChange={(event) => setTimeWindow(event.target.value)}>
-              {TIME_WINDOW_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Max Rows
-            <input
-              type="number"
-              min="20"
-              max="1000"
-              step="20"
-              value={limit}
-              onChange={(event) => {
-                const next = Number(event.target.value);
-                if (Number.isNaN(next)) {
-                  return;
-                }
-                setLimit(Math.min(1000, Math.max(20, next)));
-              }}
-            />
-          </label>
-        </div>
-
-        <div className="toggles">
-          <label className="toggle">
-            <input type="checkbox" checked={autoRefresh} onChange={(event) => setAutoRefresh(event.target.checked)} />
-            <span>Auto-refresh historical events</span>
-          </label>
-          <div className="heartbeat-wrap">
-            <p className="heartbeat">Last stream heartbeat: {formatTimestamp(lastHeartbeatAt)}</p>
-            <p className="heartbeat">
-              Last detected event: {formatTimestamp(streamStatus?.latestEventAt)} ({formatFixed(streamStatus?.secondsSinceLatestEvent, 1)}s ago)
-            </p>
-          </div>
-        </div>
-      </section>
-
       <section className="panel admin-panel">
         <div className="panel-head">
           <h2>Instructor Controls</h2>
@@ -558,6 +549,87 @@ function App() {
         </div>
         {actionMessage && <p className="success-banner">{actionMessage}</p>}
         {actionError && <p className="error-banner">{actionError}</p>}
+      </section>
+
+      <section className="panel map-panel">
+        <div className="panel-head">
+          <h2>Detection Map</h2>
+          <span className="muted">Dot size = detections in current history view</span>
+        </div>
+
+        {!geoPoints.length ? (
+          <p className="empty-state">No sensor coordinates available yet.</p>
+        ) : (
+          <>
+            <div className="geo-map-wrap">
+              <MapContainer
+                center={[geoPoints[0].latitude, geoPoints[0].longitude]}
+                zoom={6}
+                scrollWheelZoom={true}
+                className="leaflet-map"
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <MapBoundsUpdater points={geoPoints} />
+                {geoPoints.map((point) => {
+                  const radius = Math.min(18, 6 + point.detections * 1.2);
+                  const fill = eventTypeMapColor[point.latestType] || '#64748b';
+
+                  return (
+                    <CircleMarker
+                      key={point.id}
+                      center={[point.latitude, point.longitude]}
+                      radius={radius}
+                      pathOptions={{
+                        color: '#10253f',
+                        weight: 1.2,
+                        fillColor: fill,
+                        fillOpacity: 0.78,
+                      }}
+                    >
+                      <Tooltip direction="top" offset={[0, -8]} opacity={0.95}>
+                        {sensorNameMap[point.id] || point.id}
+                      </Tooltip>
+                      <Popup>
+                        <strong>{sensorNameMap[point.id] || point.id}</strong>
+                        <br />
+                        Detections: {point.detections}
+                        <br />
+                        Latest type: {eventTypeLabel(point.latestType) || 'n/a'}
+                        <br />
+                        Coordinates: {point.latitude.toFixed(4)}, {point.longitude.toFixed(4)}
+                      </Popup>
+                    </CircleMarker>
+                  );
+                })}
+              </MapContainer>
+            </div>
+            <div className="map-legend">
+              <span className="map-legend-title">Legend</span>
+              <span className="map-legend-item">
+                <i style={{ backgroundColor: eventTypeMapColor.earthquake }} />
+                Earthquake
+              </span>
+              <span className="map-legend-item">
+                <i style={{ backgroundColor: eventTypeMapColor.conventional_explosion }} />
+                Conventional Explosion
+              </span>
+              <span className="map-legend-item">
+                <i style={{ backgroundColor: eventTypeMapColor.nuclear_like }} />
+                Nuclear-like
+              </span>
+              <span className="map-legend-item">
+                <i style={{ backgroundColor: '#64748b' }} />
+                No detections yet
+              </span>
+            </div>
+            <p className="muted geo-map-note">
+              OpenStreetMap + Leaflet. Color follows latest event type per sensor, while circle size reflects detection volume.
+            </p>
+          </>
+        )}
       </section>
 
       <main className="dashboard-grid">
@@ -617,6 +689,83 @@ function App() {
             ) : (
               <p className="empty-state">No routed summary available right now.</p>
             )}
+          </div>
+        </section>
+
+        <section className="panel control-panel filters-panel">
+          <div className="panel-head">
+            <h2>Filters</h2>
+            <span className={`status-pill ${streamConnected ? 'online' : 'offline'}`}>
+              Stream: {streamPaused ? 'paused' : streamConnected ? 'online' : 'reconnecting'}
+            </span>
+          </div>
+
+          <div className="control-grid">
+            <label>
+              Sensor
+              <select value={sensorFilter} onChange={(event) => setSensorFilter(event.target.value)}>
+                <option value="">All sensors</option>
+                {sensorOptions.map((sensorId) => (
+                  <option key={sensorId} value={sensorId}>
+                    {sensorNameMap[sensorId] || sensorId}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Event Type
+              <select value={eventTypeFilter} onChange={(event) => setEventTypeFilter(event.target.value)}>
+                <option value="">All types</option>
+                {EVENT_TYPE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Time Window
+              <select value={timeWindow} onChange={(event) => setTimeWindow(event.target.value)}>
+                {TIME_WINDOW_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Max Rows
+              <input
+                type="number"
+                min="20"
+                max="1000"
+                step="20"
+                value={limit}
+                onChange={(event) => {
+                  const next = Number(event.target.value);
+                  if (Number.isNaN(next)) {
+                    return;
+                  }
+                  setLimit(Math.min(1000, Math.max(20, next)));
+                }}
+              />
+            </label>
+          </div>
+
+          <div className="toggles">
+            <label className="toggle">
+              <input type="checkbox" checked={autoRefresh} onChange={(event) => setAutoRefresh(event.target.checked)} />
+              <span>Auto-refresh historical events</span>
+            </label>
+            <div className="heartbeat-wrap">
+              <p className="heartbeat">Last stream heartbeat: {formatTimestamp(lastHeartbeatAt)}</p>
+              <p className="heartbeat">
+                Last detected event: {formatTimestamp(streamStatus?.latestEventAt)} ({formatFixed(streamStatus?.secondsSinceLatestEvent, 1)}s ago)
+              </p>
+            </div>
           </div>
         </section>
 

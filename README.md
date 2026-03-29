@@ -23,6 +23,7 @@ User stories (25 total) are documented in `input.md`.
   - analytics and system overview APIs
   - instructor manual trigger proxy APIs
 - `frontend` (React + Vite, served by Nginx): real-time command dashboard
+  - geographic detection map with Leaflet + OpenStreetMap (sensor coordinates + activity hotspots)
   - gateway/replica status overview
   - live detected-event ticker (SSE)
   - filterable historical table and classification mix

@@ -6,7 +6,7 @@ A neutral-region command center accesses the platform through a single gateway a
 
 # USER STORIES:
 
-1. As an operator, I want to start the full distributed stack with one command so that the platform is reproducible.
+1. As an operator, I want to visualize detections on a geographic map so that I can identify hotspots and impacted regions quickly.
 2. As an operator, I want automatic sensor discovery from the simulator so that newly available sensors can be ingested without manual wiring.
 3. As an operator, I want ingestion of each sensor WebSocket stream so that real-time measurements enter the platform.
 4. As an operator, I want the broker to fan-out raw measurements to replicas so that processing is distributed and fault tolerant.
@@ -39,5 +39,6 @@ A neutral-region command center accesses the platform through a single gateway a
 
 ## Notes
 
-- User stories 1–18 were already present in the current codebase; stories 19–30 were added in the story pass. Mapping to containers, endpoints, and evidence: see `Student_doc.md`.
-
+- User stories 2–18 were already present in the current codebase; stories 19–30 were added in the story pass.
+- User story 1 was refined to a stronger operator-facing feature (geographic detection map) and is now implemented in the frontend dashboard.
+- Mapping to containers, endpoints, and evidence: see `Student_doc.md`.

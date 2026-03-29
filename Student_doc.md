@@ -6,7 +6,7 @@ A neutral-region command center accesses the platform through a single gateway a
 
 # USER STORIES:
 
-1. As an operator, I want to start the full distributed stack with one command so that the platform is reproducible.
+1. As an operator, I want to visualize detections on a geographic map so that I can identify hotspots and impacted regions quickly.
 2. As an operator, I want automatic sensor discovery from the simulator so that newly available sensors can be ingested without manual wiring.
 3. As an operator, I want ingestion of each sensor WebSocket stream so that real-time measurements enter the platform.
 4. As an operator, I want the broker to fan-out raw measurements to replicas so that processing is distributed and fault tolerant.
@@ -193,7 +193,7 @@ Broker (WebSocket), simulator control stream (SSE via HTTP), Postgres (async SQL
 Unified API entrypoint for dashboard and clients; aggregates health, exposes historical/live data, analytics, and simulator trigger proxies.
 
 ### USER STORIES:
-13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 29, 30
+1, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 29, 30
 
 ### PORTS:
 8088:8088
@@ -229,9 +229,9 @@ Postgres, broker, simulator, processor replicas.
   | GET | /health/full | Full diagnostics including upstreams | 29 |
   | GET | /api/replicas | Replica health list | 17 |
   | GET | /api/processing/summary | Health-aware routed summary to healthy replica | 14 |
-  | GET | /api/sensors | Canonical sensor catalog | 19, 25 |
+  | GET | /api/sensors | Canonical sensor catalog | 1, 19, 25 |
   | GET | /api/system/overview | Consolidated system overview payload | 25 |
-  | GET | /api/events | Filterable historical events | 15 |
+  | GET | /api/events | Filterable historical events | 1, 15 |
   | GET | /api/events/export.csv | CSV export for filtered events | 20 |
   | GET | /api/events/by-id/{event_id} | Single event detail | 21 |
   | GET | /api/analytics/overview | Counts, top sensors, aggregate metrics | 22 |
@@ -247,7 +247,7 @@ Postgres, broker, simulator, processor replicas.
 React + Vite dashboard served by Nginx for command-center monitoring and operational controls.
 
 ### USER STORIES:
-16, 17, 18, 19, 20, 21, 22, 23, 24, 30
+1, 16, 17, 18, 19, 20, 21, 22, 23, 24, 30
 
 ### PORTS:
 5173:80
@@ -255,6 +255,7 @@ React + Vite dashboard served by Nginx for command-center monitoring and operati
 ### DESCRIPTION:
 Single-page dashboard that:
 - shows live detected events and stream heartbeat status
+- shows geographic detection map based on sensor coordinates and event activity
 - shows replica health and routed summary
 - provides filters, historical table, and event detail modal
 - provides analytics overview and classification mix
@@ -273,11 +274,11 @@ Gateway API (HTTP/SSE).
 - TYPE: frontend
 - DESCRIPTION: Web dashboard for operational monitoring and control.
 - PORTS: 80 (container), mapped to host 5173.
-- TECHNOLOGICAL SPECIFICATION: React 18, Vite 6, Nginx 1.27.
+- TECHNOLOGICAL SPECIFICATION: React 18, Vite 6, Leaflet (OpenStreetMap tiles), Nginx 1.27.
 - SERVICE ARCHITECTURE: SPA consuming gateway APIs and SSE.
 
 - PAGES:
 
   | Name | Description | Related Microservice | User Stories |
   | ---- | ----------- | -------------------- | ------------ |
-  | / (Dashboard) | Unified real-time operations dashboard with live events, health, analytics, history, event details, and instructor controls | gateway | 16, 17, 18, 19, 20, 21, 22, 23, 24, 30 |
+  | / (Dashboard) | Unified real-time operations dashboard with live events, detection map, health, analytics, history, event details, and instructor controls | gateway | 1, 16, 17, 18, 19, 20, 21, 22, 23, 24, 30 |
