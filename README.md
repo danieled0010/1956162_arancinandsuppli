@@ -2,7 +2,7 @@
 
 Distributed backend implementation for the Lab of Advanced Programming assignment.
 
-User stories (25 total) are documented in `input.md`.
+User stories (30 total) are documented in `input.md`.
 
 ## Architecture
 
