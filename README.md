@@ -1,73 +1,53 @@
-# Seismic Analysis Backend (FastAPI)
+# Seismic Intelligence Platform
 
-Distributed backend implementation for the Lab of Advanced Programming assignment.
+Distributed seismic monitoring platform built for the Laboratory of Advanced Programming assignment.
 
-User stories (30 total) are documented in `input.md`.
+The system ingests real-time sensor signals from the provided simulator, distributes measurements across processing replicas, classifies seismic signatures with FFT-based analysis, stores deduplicated events in PostgreSQL, and exposes a live operator dashboard.
 
-## Architecture
+## Quick Start (Docker)
 
-- `simulator` (provided image): seismic measurement source + control SSE stream
-- `broker` (FastAPI): receives simulator sensor streams and fan-outs measurements to processors
-- `processor-a/b/c` (FastAPI replicas):
-  - consumes broker stream
-  - keeps per-sensor sliding windows
-  - computes FFT dominant frequency
-  - classifies events (`earthquake`, `conventional_explosion`, `nuclear_like`)
-  - persists events idempotently into Postgres
-  - listens to simulator `/api/control` and self-terminates on `SHUTDOWN`
-- `postgres`: shared persistence for deduplicated events
-- `gateway` (FastAPI): single entry point for clients/dashboard
-  - replica health and summary routing
-  - historical event query API
-  - live event SSE endpoint
-  - analytics and system overview APIs
-  - instructor manual trigger proxy APIs
-- `frontend` (React + Vite, served by Nginx): real-time command dashboard
-  - geographic detection map with Leaflet + OpenStreetMap (sensor coordinates + activity hotspots)
-  - gateway/replica status overview
-  - live detected-event ticker (SSE)
-  - filterable historical table and classification mix
-  - event detail modal
-  - CSV export
-  - instructor trigger controls
-
-## Run
-
-1. Load provided simulator image:
+1. Load the provided simulator image:
 
 ```bash
 docker load -i seismic-signal-simulator-oci.tar
 ```
 
-2. Start backend stack:
+2. Start the full stack:
 
 ```bash
-docker compose up --build
+docker compose -f source/docker-compose.yml up --build
 ```
 
-3. Main endpoints:
+3. Stop the stack when done:
+
+```bash
+docker compose -f source/docker-compose.yml down
+```
+
+## Main URLs
 
 - Frontend dashboard: `http://localhost:5173`
-- Gateway API: `http://localhost:8088`
-- Gateway health: `GET /health`
-- Full health diagnostics: `GET /health/full`
-- System overview: `GET /api/system/overview`
-- Sensor catalog: `GET /api/sensors`
-- Historical events: `GET /api/events`
-- Event detail: `GET /api/events/by-id/{event_id}`
-- Live events SSE: `GET /api/events/live`
-- Live stream diagnostics: `GET /api/events/stream-status`
-- Analytics: `GET /api/analytics/overview`
-- CSV export: `GET /api/events/export.csv`
-- Replica health: `GET /api/replicas`
-- Routed replica summary: `GET /api/processing/summary`
-- Manual event trigger: `POST /api/admin/sensors/{sensor_id}/events`
-- Manual shutdown trigger: `POST /api/admin/shutdown`
+- Gateway API root: `http://localhost:8088`
+- Gateway health: `http://localhost:8088/health`
+- Gateway full health: `http://localhost:8088/health/full`
+- Broker health: `http://localhost:8090/health`
+- Simulator health: `http://localhost:8080/health`
+- Simulator docs: `http://localhost:8080/docs`
 
-## Notes
+## Repository Structure
 
-- The DB table has a unique constraint on `event_signature` to guarantee duplicate-safe persistence across replicas.
-- Broker does no frequency analysis/classification (distribution-only responsibility).
-- You can manually trigger simulator events/shutdown via simulator admin endpoints:
-  - `POST http://localhost:8080/api/admin/sensors/{sensor_id}/events`
-  - `POST http://localhost:8080/api/admin/shutdown`
+```text
+.
+├── Student_doc.md
+├── input.md
+├── booklets/                      # diagrams and presentation assets
+└── source/
+```
+
+## Additional Notes
+
+- Sensor measurement distribution is handled by the custom `broker` service.
+- Heavy signal processing runs only in `processor` replicas; the `gateway` remains a lightweight access/routing layer.
+- Event persistence is duplicate-safe thanks to unique `event_signature` constraints in PostgreSQL.
+- Processor replicas listen to simulator control SSE (`/api/control`) and terminate on `SHUTDOWN` for failure testing.
+- User stories and deliverable details are documented in `Student_doc.md` and `input.md`.
